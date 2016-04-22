@@ -53,7 +53,6 @@ import org.testng.annotations.Test;
 
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
-import com.ge.predix.acs.AccessControlService;
 import com.ge.predix.acs.model.Attribute;
 import com.ge.predix.acs.rest.BaseResource;
 import com.ge.predix.acs.rest.BaseSubject;
@@ -68,16 +67,16 @@ import com.ge.predix.test.utils.ZoneHelper;
 @Test
 public class PrivilegeManagementAccessControlServiceIT extends AbstractTestNGSpringContextTests {
 
-    @Value("${zone1UaaUrl}")
+    @Value("${zone1UaaUrl:http://localhost:8080/uaa}")
     private String zone1UaaBaseUrl;
 
-    @Value("${ZONE1_NAME}")
+    @Value("${ZONE1_NAME:testzone1}")
     private String acsZone1Name;
 
-    @Value("${ZONE2_NAME}")
+    @Value("${ZONE2_NAME:testzone2}")
     private String acsZone2Name;
 
-    @Value("${ZONE3_NAME}")
+    @Value("${ZONE3_NAME:testzone3}")
     private String acsZone3Name;
 
     @Autowired
@@ -117,17 +116,17 @@ public class PrivilegeManagementAccessControlServiceIT extends AbstractTestNGSpr
 
         this.acsAdminRestTemplate = this.acsRestTemplateFactory.getACSTemplateWithPolicyScope();
         this.registerWithZac = true;
-        this.zoneHelper.createTestZone(this.acsAdminRestTemplate, this.acsZone1Name, registerWithZac);
+        this.zoneHelper.createTestZone(this.acsAdminRestTemplate, this.acsZone1Name, this.registerWithZac);
     }
 
     private void setupPublicACS() throws JsonParseException, JsonMappingException, IOException {
         UaaTestUtil uaaTestUtil = new UaaTestUtil(this.acsRestTemplateFactory.getOAuth2RestTemplateForUaaAdmin(),
                 this.uaaUrl);
-        uaaTestUtil.setup(Arrays.asList(new String[] {acsZone1Name, acsZone2Name, acsZone3Name}));
+        uaaTestUtil.setup(Arrays.asList(new String[] {this.acsZone1Name, this.acsZone2Name, this.acsZone3Name}));
 
         this.acsAdminRestTemplate = this.acsRestTemplateFactory.getOAuth2RestTemplateForAcsAdmin();
         this.registerWithZac = false;
-        this.zoneHelper.createTestZone(this.acsAdminRestTemplate, this.acsZone1Name, registerWithZac);
+        this.zoneHelper.createTestZone(this.acsAdminRestTemplate, this.acsZone1Name, this.registerWithZac);
     }
 
     public void testBatchCreateSubjectsEmptyList() {
@@ -309,7 +308,7 @@ public class PrivilegeManagementAccessControlServiceIT extends AbstractTestNGSpr
     // key are deleted respectively.
     public void testPutSubjectDeleteZone() throws JsonParseException, JsonMappingException, IOException {
         String zone3Url = this.zoneHelper.getZoneSpecificUrl(this.acsZone3Name);
-        this.zoneHelper.createTestZone(this.acsAdminRestTemplate, this.acsZone3Name, registerWithZac);
+        this.zoneHelper.createTestZone(this.acsAdminRestTemplate, this.acsZone3Name, this.registerWithZac);
 
         ResponseEntity<BaseSubject> responseEntity = null;
         try {
@@ -328,7 +327,7 @@ public class PrivilegeManagementAccessControlServiceIT extends AbstractTestNGSpr
             Assert.fail("Unable to get subject.", e);
         }
         try {
-            this.zoneHelper.deleteZone(this.acsAdminRestTemplate, this.acsZone3Name, registerWithZac);
+            this.zoneHelper.deleteZone(this.acsAdminRestTemplate, this.acsZone3Name, this.registerWithZac);
             this.acsAdminRestTemplate.getForEntity(
                     zone3Url + PrivilegeHelper.ACS_SUBJECT_API_PATH + MARISSA_V1.getSubjectIdentifier(),
                     BaseSubject.class);
