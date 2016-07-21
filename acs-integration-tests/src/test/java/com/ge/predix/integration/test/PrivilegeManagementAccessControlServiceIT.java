@@ -28,6 +28,7 @@ import java.net.URI;
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -47,6 +48,7 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
 import org.testng.Assert;
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
@@ -56,6 +58,7 @@ import com.fasterxml.jackson.databind.JsonMappingException;
 import com.ge.predix.acs.model.Attribute;
 import com.ge.predix.acs.rest.BaseResource;
 import com.ge.predix.acs.rest.BaseSubject;
+import com.ge.predix.test.TestConfig;
 import com.ge.predix.test.utils.ACSRestTemplateFactory;
 import com.ge.predix.test.utils.PrivilegeHelper;
 import com.ge.predix.test.utils.UaaTestUtil;
@@ -103,6 +106,8 @@ public class PrivilegeManagementAccessControlServiceIT extends AbstractTestNGSpr
 
     @BeforeClass
     public void setup() throws JsonParseException, JsonMappingException, IOException {
+        TestConfig.setupForEclipse(); // Starts ACS when running the test in eclipse.
+
         this.zone1Url = this.zoneHelper.getZone1Url();
         if (Arrays.asList(this.env.getActiveProfiles()).contains("public")) {
             setupPublicACS();
@@ -122,7 +127,7 @@ public class PrivilegeManagementAccessControlServiceIT extends AbstractTestNGSpr
     private void setupPublicACS() throws JsonParseException, JsonMappingException, IOException {
         UaaTestUtil uaaTestUtil = new UaaTestUtil(this.acsRestTemplateFactory.getOAuth2RestTemplateForUaaAdmin(),
                 this.uaaUrl);
-        uaaTestUtil.setup(Arrays.asList(new String[] {this.acsZone1Name, this.acsZone2Name, this.acsZone3Name}));
+        uaaTestUtil.setup(Arrays.asList(new String[] { this.acsZone1Name, this.acsZone2Name, this.acsZone3Name }));
 
         this.acsAdminRestTemplate = this.acsRestTemplateFactory.getOAuth2RestTemplateForAcsAdmin();
         this.registerWithZac = false;
@@ -141,6 +146,7 @@ public class PrivilegeManagementAccessControlServiceIT extends AbstractTestNGSpr
         Assert.fail("Expected unprocessable entity http client error.");
     }
 
+    @Test
     public void testBatchSubjectsDataConstraintViolationSubjectIdentifier() {
         List<BaseSubject> subjects = new ArrayList<BaseSubject>();
         subjects.add(this.privilegeHelper.createSubject("marissa"));
@@ -241,10 +247,11 @@ public class PrivilegeManagementAccessControlServiceIT extends AbstractTestNGSpr
     public void testResourceUpdateAttributes() {
         BaseResource resource1 = this.privilegeHelper.createResource("marissa");
         BaseResource resource2 = this.privilegeHelper.createResource("marissa");
-        Set<Attribute> attributes = resource2.getAttributes();
+        Set<Attribute> attributes = new HashSet<Attribute>();
         Attribute attribute = new Attribute();
-        attribute.setName("updatedName");
+        attribute.setName("site");
         attribute.setIssuer("http://attributes.net");
+        attribute.setValue("sanfrancisco");
         attributes.add(attribute);
         resource2.setAttributes(attributes);
 
@@ -256,6 +263,7 @@ public class PrivilegeManagementAccessControlServiceIT extends AbstractTestNGSpr
         this.acsAdminRestTemplate.delete(this.zone1Url + PrivilegeHelper.ACS_RESOURCE_API_PATH + "/marissa");
     }
 
+    @Test
     public void testBatchResourcesDataConstraintViolationResourceIdentifier() {
         List<BaseResource> resources = new ArrayList<BaseResource>();
         resources.add(this.privilegeHelper.createResource("dupResourceIdentifier"));
@@ -385,6 +393,49 @@ public class PrivilegeManagementAccessControlServiceIT extends AbstractTestNGSpr
         }
     }
 
+    @Test(dataProvider = "subjectPostProvider")
+    public void testPostSubjectsUpdateAttributes(final BaseSubject subject, final String endpoint) {
+        // This test was added to test that the graph repo behaves transactionally.
+        try {
+            BaseSubject subject2 = new BaseSubject(BOB_V1.getSubjectIdentifier());
+            subject2.setAttributes(new HashSet<Attribute>(
+                    Arrays.asList(new Attribute[] { this.privilegeHelper.getDefaultAttribute() })));
+            subject.setAttributes(new HashSet<Attribute>(
+                    Arrays.asList(new Attribute[] { this.privilegeHelper.getDefaultAttribute() })));
+            ResponseEntity<Object> responseEntity = this.privilegeHelper.postSubjects(this.acsAdminRestTemplate,
+                    endpoint, null, subject, subject2);
+            Assert.assertEquals(responseEntity.getStatusCode(), HttpStatus.NO_CONTENT);
+            subject2.setAttributes(new HashSet<Attribute>(
+                    Arrays.asList(new Attribute[] { this.privilegeHelper.getAlternateAttribute() })));
+            subject.setAttributes(new HashSet<Attribute>(
+                    Arrays.asList(new Attribute[] { this.privilegeHelper.getAlternateAttribute() })));
+            this.privilegeHelper.postSubjects(this.acsAdminRestTemplate, endpoint, null, subject, subject2);
+            String encodedSubjectIdentifier = URLEncoder.encode(subject.getSubjectIdentifier(), "UTF-8");
+            URI uri = URI.create(this.zone1Url + PrivilegeHelper.ACS_SUBJECT_API_PATH + encodedSubjectIdentifier);
+            ResponseEntity<BaseSubject> forEntity = this.acsAdminRestTemplate.getForEntity(uri, BaseSubject.class);
+            Assert.assertTrue(
+                    forEntity.getBody().getAttributes().contains(this.privilegeHelper.getAlternateAttribute()));
+            encodedSubjectIdentifier = URLEncoder.encode(subject2.getSubjectIdentifier(), "UTF-8");
+            uri = URI.create(this.zone1Url + PrivilegeHelper.ACS_SUBJECT_API_PATH + encodedSubjectIdentifier);
+            forEntity = this.acsAdminRestTemplate.getForEntity(uri, BaseSubject.class);
+            Assert.assertTrue(
+                    forEntity.getBody().getAttributes().contains(this.privilegeHelper.getAlternateAttribute()));
+
+            encodedSubjectIdentifier = URLEncoder.encode(subject.getSubjectIdentifier(), "UTF-8");
+            uri = URI.create(this.zone1Url + PrivilegeHelper.ACS_SUBJECT_API_PATH + encodedSubjectIdentifier);
+            forEntity = this.acsAdminRestTemplate.getForEntity(uri, BaseSubject.class);
+            Assert.assertTrue(
+                    forEntity.getBody().getAttributes().contains(this.privilegeHelper.getAlternateAttribute()));
+            encodedSubjectIdentifier = URLEncoder.encode(subject2.getSubjectIdentifier(), "UTF-8");
+            uri = URI.create(this.zone1Url + PrivilegeHelper.ACS_SUBJECT_API_PATH + encodedSubjectIdentifier);
+            forEntity = this.acsAdminRestTemplate.getForEntity(uri, BaseSubject.class);
+            Assert.assertTrue(
+                    forEntity.getBody().getAttributes().contains(this.privilegeHelper.getAlternateAttribute()));
+        } catch (Exception e) {
+            Assert.fail("Unable to create subject.");
+        }
+    }
+
     @Test(dataProvider = "resourcePostProvider")
     public void testPostResourcePostiveCases(final BaseResource resource, final String endpoint) {
         try {
@@ -493,5 +544,11 @@ public class PrivilegeManagementAccessControlServiceIT extends AbstractTestNGSpr
     public Object[][] getAcsEndpoint() {
         Object[][] data = new Object[][] { { this.zone1Url } };
         return data;
+    }
+
+    @AfterMethod
+    public void cleanup() throws Exception {
+        this.privilegeHelper.deleteResources(this.acsAdminRestTemplate, this.zone1Url, null);
+        this.privilegeHelper.deleteSubjects(this.acsAdminRestTemplate, this.zone1Url, null);
     }
 }
