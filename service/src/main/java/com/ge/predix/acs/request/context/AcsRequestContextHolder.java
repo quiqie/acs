@@ -18,8 +18,8 @@ import com.ge.predix.uaa.token.lib.ZoneOAuth2Authentication;
 
 /**
  * A ThreadLocal store for the ACS Request Context.
- * 
- * 
+ *
+ *
  * @author 212408019
  *
  */
@@ -31,8 +31,8 @@ public final class AcsRequestContextHolder implements ApplicationContextAware {
     private AcsRequestContextHolder() {
     }
 
-    private static final InheritableThreadLocal<AcsRequestContext> ACS_REQUEST_CONTEXT_STORE = 
-            new InheritableThreadLocal<AcsRequestContext>();
+    private static final InheritableThreadLocal<AcsRequestContext> ACS_REQUEST_CONTEXT_STORE =
+            new InheritableThreadLocal<>();
 
     // Can only be called by the filter...
     // Filter calls it to create the ACSRequestContext for a request
@@ -58,9 +58,9 @@ public final class AcsRequestContextHolder implements ApplicationContextAware {
     }
 
     /**
-     * 
+     *
      * The Fluent implementation to create the {@link AcsRequestContext} for the current AcsRequest...
-     * 
+     *
      * @author 212408019
      *
      */
@@ -73,10 +73,10 @@ public final class AcsRequestContextHolder implements ApplicationContextAware {
             LOGGER.info("AcsRequestContextBuilder JPA Repositories Initialized");
         }
 
-        private Map<ACSRequestContextAttribute, Object> requestContextMap;
+        private final Map<ACSRequestContextAttribute, Object> requestContextMap;
 
         AcsRequestContextBuilder() {
-            this.requestContextMap = new HashMap<ACSRequestContextAttribute, Object>();
+            this.requestContextMap = new HashMap<>();
         }
 
         AcsRequestContextBuilder zoneEntityOrFail() {

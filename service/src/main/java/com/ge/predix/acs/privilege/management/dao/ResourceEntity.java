@@ -16,6 +16,9 @@
 
 package com.ge.predix.acs.privilege.management.dao;
 
+import java.util.Collections;
+import java.util.Set;
+
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
@@ -24,19 +27,21 @@ import javax.persistence.Id;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.Table;
+import javax.persistence.Transient;
 import javax.persistence.UniqueConstraint;
 
+import org.apache.commons.lang.builder.EqualsBuilder;
+import org.apache.commons.lang.builder.HashCodeBuilder;
+
+import com.ge.predix.acs.model.Attribute;
+import com.ge.predix.acs.rest.Parent;
 import com.ge.predix.acs.zone.management.dao.ZoneEntity;
 
-/**
- *
- * @author 212360328
- */
 @Entity
 @Table(
         name = "resource",
         uniqueConstraints = { @UniqueConstraint(columnNames = { "authorization_zone_id", "resource_identifier" }) })
-public class ResourceEntity {
+public class ResourceEntity implements ZonableEntity {
     @Id
     @Column(name = "id")
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -53,7 +58,13 @@ public class ResourceEntity {
      * Clob representing set of attributes as a JSON body.
      */
     @Column(name = "attributes", columnDefinition = "CLOB NOT NULL")
-    private String attributesAsJson;
+    private String attributesAsJson = "{}";
+
+    @Transient
+    private Set<Attribute> attributes = Collections.emptySet();
+
+    @Transient
+    private Set<Parent> parents = Collections.emptySet();
 
     /**
      * Note about all these Id's and identifiers:
@@ -69,12 +80,24 @@ public class ResourceEntity {
     public ResourceEntity() {
     }
 
-    public long getId() {
+    @Override
+    public Long getId() {
         return this.id;
     }
 
-    public void setId(final long id) {
+    @Override
+    public void setId(final Long id) {
         this.id = id;
+    }
+
+    @Override
+    public ZoneEntity getZone() {
+        return this.zone;
+    }
+
+    @Override
+    public void setZone(final ZoneEntity zone) {
+        this.zone = zone;
     }
 
     public String getResourceIdentifier() {
@@ -85,12 +108,38 @@ public class ResourceEntity {
         this.resourceIdentifier = resourceIdentifier;
     }
 
+    @Override
     public String getAttributesAsJson() {
         return this.attributesAsJson;
     }
 
+    @Override
     public void setAttributesAsJson(final String attributesAsJson) {
         this.attributesAsJson = attributesAsJson;
+    }
+
+    @Override
+    public Set<Attribute> getAttributes() {
+        return this.attributes;
+    }
+
+    @Override
+    public void setAttributes(final Set<Attribute> attributes) {
+        if (attributes == null) {
+            this.attributes = Collections.emptySet();
+        } else {
+            this.attributes = attributes;
+        }
+    }
+
+    @Override
+    public Set<Parent> getParents() {
+        return this.parents;
+    }
+
+    @Override
+    public void setParents(final Set<Parent> parents) {
+        this.parents = parents;
     }
 
     @Override
@@ -99,4 +148,20 @@ public class ResourceEntity {
                 + this.resourceIdentifier + ", attributesAsJson=" + this.attributesAsJson + "]";
     }
 
+    @Override
+    public int hashCode() {
+        return new HashCodeBuilder().append(this.resourceIdentifier).append(this.zone).append(this.attributesAsJson)
+                .append(this.parents).toHashCode();
+    }
+
+    @Override
+    public boolean equals(final Object obj) {
+        if (obj instanceof ResourceEntity) {
+            ResourceEntity other = (ResourceEntity) obj;
+            return new EqualsBuilder().append(this.resourceIdentifier, other.resourceIdentifier)
+                    .append(this.zone, other.zone).append(this.attributesAsJson, other.attributesAsJson)
+                    .append(this.parents, other.parents).isEquals();
+        }
+        return false;
+    }
 }

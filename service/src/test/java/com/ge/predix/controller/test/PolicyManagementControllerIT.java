@@ -44,13 +44,14 @@ import com.ge.predix.acs.rest.Zone;
 import com.ge.predix.acs.testutils.MockAcsRequestContext;
 import com.ge.predix.acs.testutils.MockMvcContext;
 import com.ge.predix.acs.testutils.MockSecurityContext;
+import com.ge.predix.acs.testutils.TestActiveProfilesResolver;
 import com.ge.predix.acs.testutils.TestUtils;
 import com.ge.predix.acs.utils.JsonUtils;
 import com.ge.predix.acs.zone.management.ZoneService;
 
 @WebAppConfiguration
 @ContextConfiguration("classpath:controller-tests-context.xml")
-@ActiveProfiles(profiles = { "h2", "public", "simple-cache" })
+@ActiveProfiles(resolver = TestActiveProfilesResolver.class)
 @Test
 public class PolicyManagementControllerIT extends AbstractTestNGSpringContextTests {
 
@@ -111,7 +112,7 @@ public class PolicyManagementControllerIT extends AbstractTestNGSpringContextTes
         MockMvcContext mockMvcContext = this.testUtils.createWACWithCustomGETRequestBuilder(this.wac,
                 this.testZone.getSubdomain(), this.version + "policy-set/" + policySetName);
         mockMvcContext.getMockMvc().perform(mockMvcContext.getBuilder()).andExpect(status().isOk())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON_UTF8))
                 .andExpect(jsonPath("name").value(policySetName)).andExpect(jsonPath("policies").isArray())
                 .andExpect(jsonPath("policies[1].target.resource.attributes[0].name").value("group"));
     }
@@ -126,7 +127,7 @@ public class PolicyManagementControllerIT extends AbstractTestNGSpringContextTes
     public void testCreatePolicyWithNoPolicySet() throws Exception {
         MockMvcContext ctxt = this.testUtils.createWACWithCustomPUTRequestBuilder(this.wac,
                 this.testZone.getSubdomain(), this.version + "policy-set/policyNoBody");
-        ctxt.getMockMvc().perform(ctxt.getBuilder().contentType(MediaType.APPLICATION_JSON))
+        ctxt.getMockMvc().perform(ctxt.getBuilder().contentType(MediaType.APPLICATION_JSON_UTF8))
                 .andExpect(status().isBadRequest());
     }
 
@@ -147,7 +148,7 @@ public class PolicyManagementControllerIT extends AbstractTestNGSpringContextTes
         MockMvcContext mockMvcContext = this.testUtils.createWACWithCustomGETRequestBuilder(this.wac,
                 this.testZone.getSubdomain(), this.version + "policy-set");
         mockMvcContext.getMockMvc().perform(mockMvcContext.getBuilder().accept(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk()).andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk()).andExpect(content().contentType(MediaType.APPLICATION_JSON_UTF8))
                 .andExpect(jsonPath("$[0].name", is(firstPolicySetName)));
 
     }
