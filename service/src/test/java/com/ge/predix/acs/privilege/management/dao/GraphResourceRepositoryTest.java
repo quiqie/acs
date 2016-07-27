@@ -20,8 +20,10 @@ import static com.ge.predix.acs.testutils.XFiles.SITE_BASEMENT;
 import static com.ge.predix.acs.testutils.XFiles.TOP_SECRET_CLASSIFICATION;
 import static com.ge.predix.acs.testutils.XFiles.TYPE_MONSTER_OF_THE_WEEK;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItems;
+import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.nullValue;
 
 import java.util.ArrayList;
@@ -41,7 +43,6 @@ import org.apache.tinkerpop.gremlin.util.iterator.IteratorUtils;
 import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
 import com.ge.predix.acs.config.GraphConfig;
@@ -434,7 +435,7 @@ public class GraphResourceRepositoryTest {
     }
 
     @Test
-    public void testGetDescendantsIdentifiers() {
+    public void testGetEntityAndDescendantsIds() {
         assertThat(IteratorUtils.count(this.graph.vertices()), equalTo(0L));
 
         ResourceEntity basement = persistResourceToZoneAndAssert(TEST_ZONE_1, BASEMENT_SITE_ID, BASEMENT_ATTRIBUTES);
@@ -454,26 +455,36 @@ public class GraphResourceRepositoryTest {
 
         assertThat(IteratorUtils.count(this.graph.vertices()), equalTo(5L));
 
-        Set<String> descendantsIds = this.resourceRepository.getDescendantsIdentifiers(basement);
-        assertThat(descendantsIds.size(), equalTo(5));
+        Set<String> descendantsIds = this.resourceRepository.getEntityAndDescendantsIds(basement);
+        assertThat(descendantsIds, hasSize(5));
+        assertThat(descendantsIds,
+                hasItems(basement.getResourceIdentifier(), drive.getResourceIdentifier(),
+                        ascension.getResourceIdentifier(), implant.getResourceIdentifier(),
+                        scullysTestimony.getResourceIdentifier()));
 
-        descendantsIds = this.resourceRepository.getDescendantsIdentifiers(ascension);
-        assertThat(descendantsIds.size(), equalTo(3));
+        descendantsIds = this.resourceRepository.getEntityAndDescendantsIds(ascension);
+        assertThat(descendantsIds, hasSize(3));
+        assertThat(descendantsIds, hasItems(ascension.getResourceIdentifier(), implant.getResourceIdentifier(),
+                scullysTestimony.getResourceIdentifier()));
 
-        descendantsIds = this.resourceRepository.getDescendantsIdentifiers(drive);
-        assertThat(descendantsIds.size(), equalTo(2));
+        descendantsIds = this.resourceRepository.getEntityAndDescendantsIds(drive);
+        assertThat(descendantsIds, hasSize(2));
+        assertThat(descendantsIds, hasItems(drive.getResourceIdentifier(), implant.getResourceIdentifier()));
 
-        descendantsIds = this.resourceRepository.getDescendantsIdentifiers(implant);
-        assertThat(descendantsIds.size(), equalTo(1));
+        descendantsIds = this.resourceRepository.getEntityAndDescendantsIds(implant);
+        assertThat(descendantsIds, hasSize(1));
+        assertThat(descendantsIds, hasItems(implant.getResourceIdentifier()));
 
-        descendantsIds = this.resourceRepository.getDescendantsIdentifiers(scullysTestimony);
-        assertThat(descendantsIds.size(), equalTo(1));
+        descendantsIds = this.resourceRepository.getEntityAndDescendantsIds(scullysTestimony);
+        assertThat(descendantsIds, hasSize(1));
+        assertThat(descendantsIds, hasItems(scullysTestimony.getResourceIdentifier()));
 
-        descendantsIds = this.resourceRepository.getDescendantsIdentifiers(null);
-        assertThat(descendantsIds.size(), equalTo(0));
-        
-        descendantsIds = this.resourceRepository.getDescendantsIdentifiers(new ResourceEntity(TEST_ZONE_1, "/nonexistent-resource"));
-        assertThat(descendantsIds.size(), equalTo(0));
+        descendantsIds = this.resourceRepository.getEntityAndDescendantsIds(null);
+        assertThat(descendantsIds, empty());
+
+        descendantsIds = this.resourceRepository
+                .getEntityAndDescendantsIds(new ResourceEntity(TEST_ZONE_1, "/nonexistent-resource"));
+        assertThat(descendantsIds, empty());
     }
 
     public ResourceEntity persist2LevelHierarchicalResource1toZone1() {
