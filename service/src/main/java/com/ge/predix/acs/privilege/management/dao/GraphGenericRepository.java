@@ -449,7 +449,9 @@ public abstract class GraphGenericRepository<E extends ZonableEntity> implements
     }
 
     public Set<String> getEntityAndDescendantsIds(final E entity) {
-        if (entity == null) return Collections.emptySet();
+        if (entity == null) {
+            return Collections.emptySet();
+        }
 
         Set<String> descendantsIds = new HashSet<>();
 

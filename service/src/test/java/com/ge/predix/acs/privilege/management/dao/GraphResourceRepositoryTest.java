@@ -435,7 +435,7 @@ public class GraphResourceRepositoryTest {
     }
 
     @Test
-    public void testGetEntityAndDescendantsIds() {
+    public void testGetResourceEntityAndDescendantsIds() {
         assertThat(IteratorUtils.count(this.graph.vertices()), equalTo(0L));
 
         ResourceEntity basement = persistResourceToZoneAndAssert(TEST_ZONE_1, BASEMENT_SITE_ID, BASEMENT_ATTRIBUTES);
@@ -455,35 +455,35 @@ public class GraphResourceRepositoryTest {
 
         assertThat(IteratorUtils.count(this.graph.vertices()), equalTo(5L));
 
-        Set<String> descendantsIds = this.resourceRepository.getEntityAndDescendantsIds(basement);
+        Set<String> descendantsIds = this.resourceRepository.getResourceEntityAndDescendantsIds(basement);
         assertThat(descendantsIds, hasSize(5));
         assertThat(descendantsIds,
                 hasItems(basement.getResourceIdentifier(), drive.getResourceIdentifier(),
                         ascension.getResourceIdentifier(), implant.getResourceIdentifier(),
                         scullysTestimony.getResourceIdentifier()));
 
-        descendantsIds = this.resourceRepository.getEntityAndDescendantsIds(ascension);
+        descendantsIds = this.resourceRepository.getResourceEntityAndDescendantsIds(ascension);
         assertThat(descendantsIds, hasSize(3));
         assertThat(descendantsIds, hasItems(ascension.getResourceIdentifier(), implant.getResourceIdentifier(),
                 scullysTestimony.getResourceIdentifier()));
 
-        descendantsIds = this.resourceRepository.getEntityAndDescendantsIds(drive);
+        descendantsIds = this.resourceRepository.getResourceEntityAndDescendantsIds(drive);
         assertThat(descendantsIds, hasSize(2));
         assertThat(descendantsIds, hasItems(drive.getResourceIdentifier(), implant.getResourceIdentifier()));
 
-        descendantsIds = this.resourceRepository.getEntityAndDescendantsIds(implant);
+        descendantsIds = this.resourceRepository.getResourceEntityAndDescendantsIds(implant);
         assertThat(descendantsIds, hasSize(1));
         assertThat(descendantsIds, hasItems(implant.getResourceIdentifier()));
 
-        descendantsIds = this.resourceRepository.getEntityAndDescendantsIds(scullysTestimony);
+        descendantsIds = this.resourceRepository.getResourceEntityAndDescendantsIds(scullysTestimony);
         assertThat(descendantsIds, hasSize(1));
         assertThat(descendantsIds, hasItems(scullysTestimony.getResourceIdentifier()));
 
-        descendantsIds = this.resourceRepository.getEntityAndDescendantsIds(null);
+        descendantsIds = this.resourceRepository.getResourceEntityAndDescendantsIds(null);
         assertThat(descendantsIds, empty());
 
         descendantsIds = this.resourceRepository
-                .getEntityAndDescendantsIds(new ResourceEntity(TEST_ZONE_1, "/nonexistent-resource"));
+                .getResourceEntityAndDescendantsIds(new ResourceEntity(TEST_ZONE_1, "/nonexistent-resource"));
         assertThat(descendantsIds, empty());
     }
 

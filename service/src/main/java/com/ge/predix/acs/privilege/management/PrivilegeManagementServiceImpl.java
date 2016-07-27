@@ -208,10 +208,7 @@ public class PrivilegeManagementServiceImpl implements PrivilegeManagementServic
         }
 
         try {
-            //TODO:
-            //Find all children of the upserted resource
-            //For each child, call resetForResource to invalidate cache
-            this.cache.resetForResource(zone.getName(), resource.getResourceIdentifier());
+            resetCacheForResource(zone.getName(), updatedResource);
             this.resourceRepository.save(updatedResource);
         } catch (Exception e) {
             String message = String.format(
@@ -225,6 +222,15 @@ public class PrivilegeManagementServiceImpl implements PrivilegeManagementServic
             throw new PrivilegeManagementException(message, e);
         }
         return persistedResource;
+    }
+
+    private void resetCacheForResource(final String zone, final ResourceEntity resource) {
+        if (null == this.resourceHierarchicalRepository) {
+            this.cache.resetForResource(zone, resource.getResourceIdentifier());
+        } else {
+            this.cache.resetForResourcesByIds(zone,
+                    this.resourceHierarchicalRepository.getResourceEntityAndDescendantsIds(resource));
+        }
     }
 
     /**
@@ -244,10 +250,7 @@ public class PrivilegeManagementServiceImpl implements PrivilegeManagementServic
         ResourceEntity resourceEntity = this.resourceRepository.getByZoneAndResourceIdentifier(zone,
                 resourceIdentifier);
         if (resourceEntity != null) {
-            //TODO:
-            //Find all children of the deleted resource
-            //For each child, call resetForResource invalidate the cache
-            this.cache.resetForResource(zone.getName(), resourceIdentifier);
+            resetCacheForResource(zone.getName(), resourceEntity);
             this.resourceRepository.delete(resourceEntity.getId());
             deleted = true;
             LOGGER.info(String.format("Deleted resource with resourceId = %s, zone = %s.", resourceIdentifier,
@@ -381,9 +384,7 @@ public class PrivilegeManagementServiceImpl implements PrivilegeManagementServic
         }
 
         try {
-            //TODO:
-            //Find all children of the upserted subject
-            //For each child, call resetForSubject to invalidate cache
+            resetCacheForSubject(zone.getName(), updatedSubject);
             this.cache.resetForSubject(zone.getName(), subject.getSubjectIdentifier());
             this.subjectRepository.save(updatedSubject);
         } catch (Exception e) {
@@ -400,6 +401,16 @@ public class PrivilegeManagementServiceImpl implements PrivilegeManagementServic
         return persistedSubject;
     }
 
+    private void resetCacheForSubject(final String zone, final SubjectEntity subject) {
+        if (null == this.subjectHierarchicalRepository) {
+            this.cache.resetForSubject(zone, subject.getSubjectIdentifier());
+        } else {
+            this.cache.resetForSubjectsByIds(zone,
+                    this.subjectHierarchicalRepository.getSubjectEntityAndDescendantsIds(subject));
+        }
+
+    }
+
     @Override
     @Transactional
     public boolean deleteSubject(final String subjectIdentifier) {
@@ -409,10 +420,7 @@ public class PrivilegeManagementServiceImpl implements PrivilegeManagementServic
 
         SubjectEntity subjectEntity = this.subjectRepository.getByZoneAndSubjectIdentifier(zone, subjectIdentifier);
         if (subjectEntity != null) {
-            //TODO:
-            //Find all children of the deleted subject
-            //For each child, call resetForSubject to invalidate the cache
-            this.cache.resetForSubject(zone.getName(), subjectIdentifier);
+            resetCacheForSubject(zone.getName(), subjectEntity);
             this.subjectRepository.delete(subjectEntity.getId());
             deleted = true;
             LOGGER.info(String.format("Deleted subject with subjectIdentifier=%s, zone = %s.", subjectIdentifier,

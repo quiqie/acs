@@ -11,4 +11,6 @@ public interface SubjectHierarchicalRepository {
 
     SubjectEntity getByZoneAndSubjectIdentifierWithInheritedAttributes(final ZoneEntity zone,
             final String subjectIdentifier);
+
+    Set<String> getSubjectEntityAndDescendantsIds(final SubjectEntity entity); 
 }

@@ -162,6 +162,13 @@ public abstract class AbstractPolicyEvaluationCache implements PolicyEvaluationC
     }
 
     @Override
+    public void resetForResourcesByIds(final String zoneId, final Set<String> resourceIds) {
+        for (String resourceId : resourceIds) {
+            this.resetForResource(zoneId, resourceId);
+        }
+    }
+
+    @Override
     public void resetForResources(final String zoneId, final List<ResourceEntity> resourceEntities) {
         String timestamp = timestampValue();
         List<String> fromKeys = new ArrayList<>();
@@ -196,6 +203,13 @@ public abstract class AbstractPolicyEvaluationCache implements PolicyEvaluationC
         String timestamp = timestampValue();
         logSetSubjectTimestampDebugMessage(key, timestamp, subjectId);
         set(key, timestamp);
+    }
+
+    @Override
+    public void resetForSubjectsByIds(final String zoneId, final Set<String> subjectIds) {
+        for (String subjectId : subjectIds) {
+            this.resetForSubject(zoneId, subjectId);
+        }
     }
 
     @Override
