@@ -208,6 +208,9 @@ public class PrivilegeManagementServiceImpl implements PrivilegeManagementServic
         }
 
         try {
+            //TODO:
+            //Find all children of the upserted resource
+            //For each child, call resetForResource to invalidate cache
             this.cache.resetForResource(zone.getName(), resource.getResourceIdentifier());
             this.resourceRepository.save(updatedResource);
         } catch (Exception e) {
@@ -241,6 +244,9 @@ public class PrivilegeManagementServiceImpl implements PrivilegeManagementServic
         ResourceEntity resourceEntity = this.resourceRepository.getByZoneAndResourceIdentifier(zone,
                 resourceIdentifier);
         if (resourceEntity != null) {
+            //TODO:
+            //Find all children of the deleted resource
+            //For each child, call resetForResource invalidate the cache
             this.cache.resetForResource(zone.getName(), resourceIdentifier);
             this.resourceRepository.delete(resourceEntity.getId());
             deleted = true;
@@ -375,6 +381,9 @@ public class PrivilegeManagementServiceImpl implements PrivilegeManagementServic
         }
 
         try {
+            //TODO:
+            //Find all children of the upserted subject
+            //For each child, call resetForSubject to invalidate cache
             this.cache.resetForSubject(zone.getName(), subject.getSubjectIdentifier());
             this.subjectRepository.save(updatedSubject);
         } catch (Exception e) {
@@ -400,6 +409,9 @@ public class PrivilegeManagementServiceImpl implements PrivilegeManagementServic
 
         SubjectEntity subjectEntity = this.subjectRepository.getByZoneAndSubjectIdentifier(zone, subjectIdentifier);
         if (subjectEntity != null) {
+            //TODO:
+            //Find all children of the deleted subject
+            //For each child, call resetForSubject to invalidate the cache
             this.cache.resetForSubject(zone.getName(), subjectIdentifier);
             this.subjectRepository.delete(subjectEntity.getId());
             deleted = true;
