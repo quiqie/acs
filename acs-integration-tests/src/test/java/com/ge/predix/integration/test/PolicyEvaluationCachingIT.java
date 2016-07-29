@@ -45,6 +45,7 @@ import com.ge.predix.acs.model.Attribute;
 import com.ge.predix.acs.model.Effect;
 import com.ge.predix.acs.rest.BaseResource;
 import com.ge.predix.acs.rest.BaseSubject;
+import com.ge.predix.acs.rest.Parent;
 import com.ge.predix.acs.rest.PolicyEvaluationRequestV1;
 import com.ge.predix.acs.rest.PolicyEvaluationResult;
 import com.ge.predix.acs.utils.JsonUtils;
@@ -92,6 +93,7 @@ public class PolicyEvaluationCachingIT extends AbstractTestNGSpringContextTests 
     private OAuth2RestTemplate acsAdminRestTemplate;
     private UaaTestUtil uaaTestUtil;
     private final HttpHeaders acsZone1Headers = new HttpHeaders();
+	private boolean hierarchicalRepoEnabled = false;
 
     @BeforeClass
     public void setup() throws JsonParseException, JsonMappingException, IOException {
@@ -104,6 +106,10 @@ public class PolicyEvaluationCachingIT extends AbstractTestNGSpringContextTests 
         } else {
             setupPredixACS();
         }
+
+		if (Arrays.asList(this.env.getActiveProfiles()).contains("titan")) {
+			hierarchicalRepoEnabled = true;
+		}
     }
 
     private void setupPredixACS() throws JsonParseException, JsonMappingException, IOException {
@@ -165,6 +171,85 @@ public class PolicyEvaluationCachingIT extends AbstractTestNGSpringContextTests 
             }
         }
     }
+
+	/**
+	 * This test makes sure that cached policy evaluation results are properly
+	 * invalidated for a node and its descendants, when a policy set changes for
+	 * the parent.
+	 */
+	@Test
+	public void testPolicyEvalCacheForDescendantsWhenPolicySetChangesForParent() throws Exception {
+
+		if (!hierarchicalRepoEnabled) {
+			return;
+		}
+
+		BaseSubject subjectParent = MARISSA_V1;
+		BaseSubject subjectChild = BOB_V1;
+		PolicyEvaluationRequestV1 policyEvaluationRequest = this.policyHelper
+				.createEvalRequest(MARISSA_V1.getSubjectIdentifier(), "sanramon");
+		PolicyEvaluationRequestV1 childPolicyEvaluationRequest = this.policyHelper
+				.createEvalRequest(BOB_V1.getSubjectIdentifier(), "sanramon");
+		String endpoint = this.acsUrl;
+
+		String testPolicyName = null;
+		try {
+			this.privilegeHelper.putSubject(this.acsAdminRestTemplate, subjectParent, endpoint, this.acsZone1Headers,
+					this.privilegeHelper.getDefaultAttribute());
+			String policyFile = "src/test/resources/policies/single-site-based.json";
+			testPolicyName = this.policyHelper.setTestPolicy(this.acsAdminRestTemplate, this.acsZone1Headers, endpoint,
+					policyFile);
+
+			ResponseEntity<PolicyEvaluationResult> postForEntity = this.acsAdminRestTemplate.postForEntity(
+					endpoint + PolicyHelper.ACS_POLICY_EVAL_API_PATH,
+					new HttpEntity<>(policyEvaluationRequest, this.acsZone1Headers), PolicyEvaluationResult.class);
+
+			Assert.assertEquals(postForEntity.getStatusCode(), HttpStatus.OK);
+			PolicyEvaluationResult responseBody = postForEntity.getBody();
+			Assert.assertEquals(responseBody.getEffect(), Effect.PERMIT);
+
+			subjectChild.setParents(
+					new HashSet<>(Arrays.asList(new Parent[] { new Parent(subjectParent.getSubjectIdentifier()) })));
+			this.privilegeHelper.putSubject(this.acsAdminRestTemplate, subjectChild, endpoint, this.acsZone1Headers);
+
+			postForEntity = this.acsAdminRestTemplate.postForEntity(endpoint + PolicyHelper.ACS_POLICY_EVAL_API_PATH,
+					new HttpEntity<>(childPolicyEvaluationRequest, this.acsZone1Headers), PolicyEvaluationResult.class);
+
+			Assert.assertEquals(postForEntity.getStatusCode(), HttpStatus.OK);
+			responseBody = postForEntity.getBody();
+			Assert.assertEquals(responseBody.getEffect(), Effect.PERMIT);
+
+			policyFile = "src/test/resources/policies/deny-all.json";
+			testPolicyName = this.policyHelper.setTestPolicy(this.acsAdminRestTemplate, this.acsZone1Headers, endpoint,
+					policyFile);
+
+			postForEntity = this.acsAdminRestTemplate.postForEntity(endpoint + PolicyHelper.ACS_POLICY_EVAL_API_PATH,
+					new HttpEntity<>(policyEvaluationRequest, this.acsZone1Headers), PolicyEvaluationResult.class);
+
+			Assert.assertEquals(postForEntity.getStatusCode(), HttpStatus.OK);
+			responseBody = postForEntity.getBody();
+			Assert.assertEquals(responseBody.getEffect(), Effect.DENY);
+
+			postForEntity = this.acsAdminRestTemplate.postForEntity(endpoint + PolicyHelper.ACS_POLICY_EVAL_API_PATH,
+					new HttpEntity<>(childPolicyEvaluationRequest, this.acsZone1Headers), PolicyEvaluationResult.class);
+
+			Assert.assertEquals(postForEntity.getStatusCode(), HttpStatus.OK);
+			responseBody = postForEntity.getBody();
+			Assert.assertNotEquals(responseBody.getEffect(), Effect.PERMIT);
+			Assert.assertEquals(responseBody.getEffect(), Effect.DENY);
+
+		} finally {
+			if (testPolicyName != null) {
+				this.policyHelper.deletePolicySet(this.acsAdminRestTemplate, this.zoneHelper.getZone1Url(),
+						testPolicyName, this.acsZone1Headers);
+				this.privilegeHelper.deleteSubject(this.acsAdminRestTemplate, this.zoneHelper.getZone1Url(),
+						subjectParent.getSubjectIdentifier(), this.acsZone1Headers);
+				this.privilegeHelper.deleteSubject(this.acsAdminRestTemplate, this.zoneHelper.getZone1Url(),
+						subjectChild.getSubjectIdentifier(), this.acsZone1Headers);
+
+			}
+		}
+	}
 
     /**
      * This test makes sure that cached policy evaluation results are properly invalidated when the name of a policy
